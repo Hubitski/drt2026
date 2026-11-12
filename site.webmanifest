@@ -1,0 +1,16 @@
+{
+  "name": "ДРТ-2026 — бесплатное онлайн-РТ",
+  "short_name": "ДРТ-2026",
+  "description": "Бесплатный онлайн-тренажёр ДРТ-2026: 370 заданий по 10 предметам, официальные решения и 100-балльная шкала РИКЗ.",
+  "lang": "ru",
+  "start_url": "/drt2026/",
+  "scope": "/drt2026/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2ede3",
+  "theme_color": "#9b3028",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
