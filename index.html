@@ -328,6 +328,12 @@ details .details-inner{padding:10px 0 4px}
 .sources-list li{margin:3px 0}
 .sources-list a{color:var(--accent);word-break:break-word}
 .modal-note{font-size:.8rem;color:var(--muted);line-height:1.5;margin-top:8px}
+.report-row{margin-top:16px;text-align:right}
+.report-cats{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px;margin:12px 0}
+.report-cats label{display:flex;gap:7px;align-items:flex-start;font-size:.8rem;line-height:1.35;color:var(--ink-2)}
+.report-cats input{margin:2px 0 0;flex:0 0 auto}
+.report-text{width:100%;min-height:96px;margin-top:10px;padding:10px 12px;border:1px solid var(--rule-2);border-radius:8px;background:var(--paper);color:var(--ink);font:inherit;font-size:.9rem;resize:vertical}
+.report-text:focus{outline:2px solid var(--accent);outline-offset:1px}
 @media(min-width:640px){.modal-backdrop{align-items:center;padding:24px}.modal{border-radius:12px}}
 .nav-parts{display:flex;flex-direction:column;gap:16px;margin-top:14px}
 .nav-part h3{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-family:var(--sans);margin-bottom:7px}
@@ -805,6 +811,7 @@ function renderTest(code){
       <div class="sheet-head"><span class="stamp">${q.label}</span><span class="sheet-part">${q.part==='A'?'Часть A · выбор вариантов':'Часть B · краткий ответ'}</span></div>
       ${instruction}${passage}${prompt}${opts}
       <div class="answer">${answer}</div>
+      <div class="report-row"><button class="text-btn" data-action="report" data-code="${code}" data-task="${q.label}">сообщить о проблеме</button></div>
     </div></main>
     <div class="bottombar"><div class="bottombar-inner">
       <button class="btn ghost" data-action="prev" data-code="${code}" ${x.index===0?'disabled':''}>Назад</button>
@@ -961,6 +968,7 @@ function renderReview(code){
       <div class="review-body">
         <div class="review-title"><span class="stamp">${q.label}</span><span class="review-status">${status}</span></div>
         <div class="review-answers">Ваш ответ: <b class="${answerClass}">${esc(user)}</b> · Верно: <span class="correct">${esc(correct)}</span> · <b>${pts} из ${max} ${max===1?'балла':'баллов'}</b></div>
+        <div class="report-row"><button class="text-btn" data-action="report" data-code="${code}" data-task="${q.label}">сообщить о проблеме</button></div>
         <details${open}><summary>Задание</summary><div class="details-inner">${instructionBlock(q)}${passageBlock(q)}${figures(q.prompt,`Задание ${q.label}`)}${opts}</div></details>
         <details${open}><summary>Разбор</summary><div class="details-inner">${figures(q.solution,`Решение ${q.label}`)}</div></details>
       </div>
@@ -1059,6 +1067,41 @@ function showSources(){
     <div class="modal-actions"><button class="btn primary" data-action="close-modal">Понятно</button></div>`);
 }
 
+const REPORT_CATS=['Нет задания','Нет вариантов ответа','Нет решения','Неверный ответ','Опечатка','Плохая картинка','Не работает ввод','Неверный балл','Другое'];
+function openReport(code,task){
+  const s=subj(code);
+  const cats=REPORT_CATS.map(c=>`<label><input type="checkbox" name="report-cat" value="${esc(c)}"> ${esc(c)}</label>`).join('');
+  showModal(`<h2>Сообщить о проблеме</h2>
+    <p class="modal-note">${esc(s?s.name:'')}${task?' · задание '+esc(task):''}</p>
+    <div class="report-cats">${cats}</div>
+    <textarea class="report-text" id="report-text" maxlength="500" placeholder="Кратко опишите проблему: например, не видно задание, нет вариантов ответа, неверное решение…"></textarea>
+    <p class="modal-note">Не указывайте персональные данные. Текст уйдёт в анонимную статистику.</p>
+    <div class="modal-actions"><button class="btn ghost" data-action="close-modal">Отмена</button><button class="btn primary" data-action="send-report" data-code="${esc(code)}" data-task="${esc(task||'')}">Отправить</button></div>`);
+  const t=document.getElementById('report-text');if(t)try{t.focus();}catch(e){}
+}
+function sendReport(code,task){
+  const cats=Array.from(document.querySelectorAll('input[name="report-cat"]:checked')).map(x=>x.value);
+  const text=(document.getElementById('report-text')?.value||'').trim();
+  if(!cats.length&&!text){
+    showModal(`<h2>Опишите проблему</h2><p>Выберите категорию или напишите пару слов.</p><div class="modal-actions"><button class="btn primary" data-action="close-modal">Понятно</button></div>`);
+    return;
+  }
+  let last=0;try{last=Number(localStorage.getItem('drt26_report_at')||0);}catch(e){}
+  if(Date.now()-last<60000){
+    showModal(`<h2>Слишком часто</h2><p>Повторно отправить жалобу можно через минуту.</p><div class="modal-actions"><button class="btn primary" data-action="close-modal">Понятно</button></div>`);
+    return;
+  }
+  const s=subj(code);
+  const data={subject:code,subject_name:s?s.name:'',task:task||'',view:currentView,category:cats.join(', '),text:text.slice(0,500)};
+  if(window.umami&&typeof window.umami.track==='function'){
+    track('report_submitted',data);
+    try{localStorage.setItem('drt26_report_at',String(Date.now()));}catch(e){}
+    showModal(`<h2>Спасибо</h2><p>Жалоба отправлена. Мы посмотрим это задание.</p><div class="modal-actions"><button class="btn primary" data-action="close-modal">Закрыть</button></div>`);
+  }else{
+    showModal(`<h2>Офлайн-версия</h2><p>Отправка доступна в онлайн-версии. Текст жалобы:</p><div class="modal-note" style="white-space:pre-wrap">${esc(text||cats.join(', '))}</div><div class="modal-actions"><button class="btn primary" data-action="close-modal">Закрыть</button></div>`);
+  }
+}
+
 /* ---------- actions ---------- */
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-action]');
@@ -1066,6 +1109,8 @@ document.addEventListener('click',e=>{
   const a=el.dataset.action;
   if(a==='theme')toggleTheme();
   else if(a==='sources')showSources();
+  else if(a==='report')openReport(el.dataset.code,el.dataset.task||'');
+  else if(a==='send-report')sendReport(el.dataset.code,el.dataset.task||'');
   else if(a==='reset-all')confirmResetAll();
   else if(a==='reset-subject')confirmResetSubject(el.dataset.code);
   else if(a==='start')startNew(el.dataset.code);
