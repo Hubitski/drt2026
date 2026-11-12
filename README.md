@@ -4,7 +4,7 @@
 
 ## Открыть
 
-- GitHub Pages: ссылка появится после публикации.
+- GitHub Pages: **https://hubitski.github.io/drt2026/**
 - Локально: скачать `index.html` и открыть в Chrome/Safari/Edge. Интернет не нужен.
 - Источники и права: [`sources.html`](sources.html).
 
